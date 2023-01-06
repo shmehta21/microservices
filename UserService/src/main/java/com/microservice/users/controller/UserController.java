@@ -3,6 +3,7 @@ package com.microservice.users.controller;
 import com.microservice.users.entities.User;
 import com.microservice.users.services.UserService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public class UserController {
 
     @GetMapping("/{userId}")
     @CircuitBreaker(name="userToRatingAndHotelService", fallbackMethod = "userToRatingAndHotelServiceFallback")
+    @RateLimiter(name="userServiceRateLimiter", fallbackMethod="userToRatingAndHotelServiceFallback")
     public  ResponseEntity<User> getSingleUser(@PathVariable String userId){
         User foundUser = userService.getUser(userId);
         return ResponseEntity.ok(foundUser);
@@ -36,7 +38,7 @@ public class UserController {
 
     //fallback method
     private ResponseEntity<User> userToRatingAndHotelServiceFallback(String userId, Exception ex){
-        log.info("Fallback executed as the dependent services are down: ", ex.getMessage());
+        log.info("Fallback executed as the dependent services are down/rate-limited: ", ex.getMessage());
         return new ResponseEntity<>(User.builder()
                 .email("dummy@email.com")
                 .name("dummy")
